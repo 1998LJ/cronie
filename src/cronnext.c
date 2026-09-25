@@ -98,7 +98,7 @@ void printflags(char *indent, int flags) {
 /*
  * print a string as a YAML double-quoted scalar
  */
-void print_yaml_string(const char *value) {
+static void print_yaml_string(const char *value) {
 	const unsigned char *p = (const unsigned char *) value;
 
 	putchar('"');
