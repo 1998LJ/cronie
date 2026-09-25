@@ -1,0 +1,44 @@
+name: Validate issue 231 START_HOURS_RANGE
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libaudit-dev libpam0g-dev libselinux1-dev
+
+      - name: Build
+        run: |
+          ./autogen.sh
+          mkdir build
+          cd build
+          ../configure --disable-silent-rules --enable-syscrontab --with-audit --with-inotify --with-pam --with-selinux
+          make -j$(nproc)
+
+      - name: Reproduce issue 231
+        run: |
+          reject_range() {
+            printf 'START_HOURS_RANGE=%s\n1\t0\tjob\ttrue\n' "$1" > /tmp/anacrontab
+            if build/anacron/anacron -T -t /tmp/anacrontab; then
+              echo "expected START_HOURS_RANGE=$1 to be rejected"
+              exit 1
+            fi
+          }
+
+          reject_range '30-40'
+          reject_range '2147483648-0'
+          reject_range '6-4294967302'
+
+          printf 'START_HOURS_RANGE=6-18\n1\t0\tjob\ttrue\n' > /tmp/anacrontab
+          build/anacron/anacron -T -t /tmp/anacrontab
