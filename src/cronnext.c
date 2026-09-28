@@ -140,10 +140,9 @@ int matchday(entry *e, time_t time) {
 
 	localtime_r(&time, &current);
 
-	if (e->flags & DOW_STAR)
-		return bit_test(e->dom, current.tm_mday - 1);
-	if (e->flags & DOM_STAR) 
-		return bit_test(e->dow, current.tm_wday);
+	if (e->flags & (DOM_STAR | DOW_STAR))
+		return bit_test(e->dom, current.tm_mday - 1) &&
+			bit_test(e->dow, current.tm_wday);
 	return bit_test(e->dom, current.tm_mday - 1) ||
 		bit_test(e->dow, current.tm_wday);
 }
