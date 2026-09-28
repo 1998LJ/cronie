@@ -1,0 +1,46 @@
+name: Validate issue 215 stepped day fields
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libaudit-dev libpam0g-dev libselinux1-dev
+
+      - name: Build
+        run: |
+          ./autogen.sh
+          mkdir build
+          cd build
+          ../configure --disable-silent-rules --enable-syscrontab --with-audit --with-inotify --with-pam --with-selinux
+          make -j$(nproc)
+
+      - name: Validate stepped day-of-week
+        env:
+          TZ: UTC
+        run: |
+          printf '0 0 * * */2 echo x\n' > /tmp/step-dow.cron
+          printf '0 0 * * 0,2,4,6 echo x\n' > /tmp/list-dow.cron
+          step_result=$(build/src/cronnext -t 1767312000 /tmp/step-dow.cron | awk '/next:/ {print $2; exit}')
+          list_result=$(build/src/cronnext -t 1767312000 /tmp/list-dow.cron | awk '/next:/ {print $2; exit}')
+          test "$step_result" = "1767398400"
+          test "$step_result" = "$list_result"
+
+      - name: Validate stepped day-of-month
+        env:
+          TZ: UTC
+        run: |
+          printf '0 0 */3 * 2 echo x\n' > /tmp/step-dom.cron
+          result=$(build/src/cronnext -t 1767657600 /tmp/step-dom.cron | awk '/next:/ {print $2; exit}')
+          test "$result" = "1768262400"
