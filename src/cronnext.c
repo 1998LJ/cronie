@@ -134,7 +134,7 @@ void printcrontab(user *u) {
  * check whether time matches day of month and/or day of week; when either
  * field uses '*' syntax both bitmaps must match, otherwise either bitmap may
  * match. This mirrors the dom/dow logic in cron.c. The bitmap still matters
- * for stepped forms such as */2, even though the corresponding STAR flag is
+ * for stepped forms using a star with a step value, even though the corresponding STAR flag is
  * set.
  */
 int matchday(entry *e, time_t time) {
