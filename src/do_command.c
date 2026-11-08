@@ -481,8 +481,10 @@ static int child_process(entry * e, char **jobenv) {
 						(void) _exit(ERROR_EXIT);
 					}
 				}
-				else {
-					strncpy(mailcmd, MailCmd, MAX_COMMAND+1);
+				else if (!format_mail_command(MailCmd, mailfrom, mailcmd,
+										sizeof mailcmd)) {
+					fprintf(stderr, "mailcmd too long\n");
+					(void) _exit(ERROR_EXIT);
 				}
 				if (!(mail = cron_popen(mailcmd, "w", e->pwd, jobenv))) {
 					perror(mailcmd);

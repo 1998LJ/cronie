@@ -138,3 +138,46 @@ int expand_envvar(const char *source, char *result, size_t max_size) {
 too_big:
     return 0;
 }
+
+/* Format a custom mail command. Only %s substitutes the validated MAILFROM
+ * value; %% escapes a literal percent. Other percent sequences remain
+ * unchanged, preserving existing -m command arguments. */
+int format_mail_command(const char *template, const char *sender,
+                        char *output, size_t max_size) {
+    size_t used = 0;
+
+    if (!template || !sender || !output || max_size == 0)
+        return 0;
+
+    while (*template) {
+        const char *replacement = NULL;
+        size_t length;
+
+        if (*template == '%' && template[1] == 's') {
+            replacement = sender;
+            template += 2;
+        } else if (*template == '%' && template[1] == '%') {
+            replacement = "%";
+            template += 2;
+        }
+
+        if (replacement) {
+            length = strlen(replacement);
+            if (length > max_size - used - 1)
+                goto too_long;
+            memcpy(output + used, replacement, length);
+            used += length;
+        } else {
+            if (used == max_size - 1)
+                goto too_long;
+            output[used++] = *template++;
+        }
+    }
+
+    output[used] = '\0';
+    return 1;
+
+too_long:
+    output[0] = '\0';
+    return 0;
+}

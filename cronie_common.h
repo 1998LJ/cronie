@@ -39,5 +39,6 @@
 #endif
 
 int expand_envvar(const char *, char *, size_t);
+int format_mail_command(const char *, const char *, char *, size_t);
 
 #endif /* CRONIE_COMMON_H */

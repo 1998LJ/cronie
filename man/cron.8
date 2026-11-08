@@ -156,7 +156,17 @@ mail output instead of using
 .BR sendmail (8)
 This command must accept a fully formatted mail message (with headers) on
 standard input and send it as a mail message to the recipients specified
-in the mail headers.  Specifying the string
+in the mail headers.  The optional
+.B %s
+placeholder is replaced with the validated
+.B MAILFROM
+sender address; use
+.B %%
+to pass a literal percent sign.  For example,
+.B "crond -m '/usr/sbin/sendmail -t -f %s'"
+works with the limited options accepted by BusyBox
+.BR sendmail (1).
+If no placeholder is present, the command is unchanged.  Specifying the string
 .I "off"
 (i.e., crond -m off)
 will disable the sending of mail.
