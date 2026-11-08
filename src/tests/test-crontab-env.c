@@ -17,7 +17,7 @@ static void test_assignment(const char *source, const char *expected,
 int main(void) {
     char output[255];
     char *empty[] = {NULL};
-    char *prior[] = {"NAME=private", "HOME=/alt/home", "EMPTY=", NULL};
+    char *prior[] = {"NAME=private", "HOME=/alt/home", "EMPTY=", "USER=fake", "LOGNAME=fake", NULL};
 
     assert(setenv("HOME", "/root", 1) == 0);
     assert(setenv("USER", "root", 1) == 0);
@@ -28,6 +28,8 @@ int main(void) {
                     "PATH=/home/alice/.local/bin:/usr/bin", empty);
     test_assignment("MAILTO=${USER}@example.com", "MAILTO=alice@example.com", empty);
     test_assignment("OWNER=$LOGNAME", "OWNER=alice", empty);
+    test_assignment("OWNER=$LOGNAME", "OWNER=alice", prior);
+    test_assignment("OWNER=$USER", "OWNER=alice", prior);
     test_assignment("PATH=$HOME/$NAME", "PATH=/alt/home/private", prior);
     test_assignment("PATH=$EMPTY/x", "PATH=/x", prior);
     test_assignment("PATH=$ONLY_PROCESS/x", "PATH=fallback/x", empty);

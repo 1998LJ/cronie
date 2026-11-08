@@ -137,13 +137,15 @@ static int expand_envvar_impl(const char *source, char *result, size_t max_size,
         envvar_name[envvar_name_size] = '\0';
 
         /* Copy envvar value to result */
-        envvar_value = env_value(envvar_name, envp);
+        /* USER and LOGNAME are fixed by the crontab owner's passwd entry;
+         * HOME can be changed by an earlier crontab assignment. */
+        if (user && (strcmp(envvar_name, "USER") == 0 ||
+                     strcmp(envvar_name, "LOGNAME") == 0))
+            envvar_value = user;
+        else
+            envvar_value = env_value(envvar_name, envp);
         if (envvar_value == NULL && home && strcmp(envvar_name, "HOME") == 0)
             envvar_value = home;
-        if (envvar_value == NULL && user &&
-            (strcmp(envvar_name, "USER") == 0 ||
-             strcmp(envvar_name, "LOGNAME") == 0))
-            envvar_value = user;
         if (envvar_value == NULL)
             envvar_value = getenv(envvar_name);
         free(envvar_name);
@@ -181,8 +183,8 @@ int expand_envvar_in_env(const char *source, char *result, size_t max_size,
     return expand_envvar_impl(source, result, max_size, envp, NULL, NULL);
 }
 
-/* Expand a full NAME=value crontab assignment using preceding assignments
- * and the crontab owner's HOME, USER and LOGNAME fallback values.
+/* Expand a full NAME=value crontab assignment using preceding assignments,
+ * the crontab owner's HOME fallback and fixed USER/LOGNAME account values.
  * Leave NAME= unchanged, so the result can be passed to env_set(). */
 int expand_crontab_assignment(const char *source, char *result, size_t max_size,
                               char *const *envp, const char *home,

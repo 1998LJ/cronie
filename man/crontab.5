@@ -76,8 +76,9 @@ order they appear. References such as
 .B $HOME
 and
 .B ${NAME}
-use values assigned earlier in the crontab. Until overridden, HOME, USER
-and LOGNAME resolve to the crontab owner's account values. For example:
+use values assigned earlier in the crontab. HOME resolves to the owner's
+home directory until explicitly overridden. USER and LOGNAME always reflect
+the crontab owner's account name. For example:
 .nf
 PATH=$HOME/.local/bin:/usr/bin
 ARCHIVE=${HOME}/archive
