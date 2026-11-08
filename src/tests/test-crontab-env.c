@@ -35,6 +35,18 @@ int main(void) {
     test_assignment("PATH=$ONLY_PROCESS/x", "PATH=fallback/x", empty);
     test_assignment("NAME=no-variables", "NAME=no-variables", empty);
 
+    /* A literal or malformed '$' is not a variable reference. */
+    test_assignment("PRICE=cost$", "PRICE=cost$", empty);
+    test_assignment("TEXT=hello$!world", "TEXT=hello$!world", empty);
+    test_assignment("TEXT=before$-${USER}after",
+                    "TEXT=before$-aliceafter", empty);
+    test_assignment("TEXT=${}abc", "TEXT=${}abc", empty);
+    test_assignment("TEXT=${BROKEN", "TEXT=${BROKEN", empty);
+    test_assignment("TEXT=$9", "TEXT=$9", empty);
+    test_assignment("TEXT=$$USER", "TEXT=$alice", empty);
+    test_assignment("TEXT=${UNFINISHED and $USER",
+                    "TEXT=${UNFINISHED and alice", empty);
+
     assert(expand_crontab_assignment("NAME=$USER", output, 11, empty,
                                      "/home/alice", "alice"));
     assert(strcmp(output, "NAME=alice") == 0);

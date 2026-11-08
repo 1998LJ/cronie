@@ -2,71 +2,37 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-/* Return:
- * 0 - Not found
- * 1 - Found */
+/* Find $NAME or ${NAME}; leave a literal or malformed dollar expression
+ * untouched and keep searching for a later, valid reference. */
 static int find_envvar(const char *source, const char **start_pos, size_t *length) {
-    const char *reader;
-    size_t size = 1;
-    int waiting_close = 0;
-    
+    const char *candidate;
+
     *length = 0;
     *start_pos = NULL;
-
-    if (source == NULL || *source == '\0') {
+    if (source == NULL)
         return 0;
-    }
 
-    *start_pos = strchr(source, '$');
+    for (candidate = strchr(source, '$'); candidate != NULL;
+         candidate = strchr(candidate + 1, '$')) {
+        const char *reader = candidate + 1;
+        int braces = (*reader == '{');
 
-    if (*start_pos == NULL) {
-        return 0;
-    }
-    /* Skip $, since all envvars start with this char */
-    reader = *start_pos + 1;
-    
-    while (*reader != '\0') {
-        if (*reader == '_' || isalnum(*reader)) {
-            if (size <= 2 && isdigit(*reader)) {
-                goto not_found;
-            }
-            size++;
-        } 
-        else if (*reader == '{') {
-            if (size != 1) {
-                goto not_found;
-            }
-            size++;
-            waiting_close = 1;
-        } 
-        else if (*reader == '}') {
-            if ((waiting_close && size == 2) || size == 1) {
-                goto not_found;
-            }
-            
-            if (waiting_close) {
-                size++;
-            }
-            
-            waiting_close = 0;
-            break;
-        } 
-        else
-            break;
-
+        if (braces)
+            reader++;
+        if (*reader != '_' && !isalpha((unsigned char)*reader))
+            continue;
         reader++;
+        while (*reader == '_' || isalnum((unsigned char)*reader))
+            reader++;
+        if (braces) {
+            if (*reader != '}')
+                continue;
+            reader++;
+        }
+        *start_pos = candidate;
+        *length = (size_t)(reader - candidate);
+        return 1;
     }
-
-    if (waiting_close) {
-        goto not_found;
-    }
-
-    *length = size;
-    return 1;
-
-not_found:
-    *length = 0;
-    *start_pos = NULL;
     return 0;
 }
 
