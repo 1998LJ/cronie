@@ -70,18 +70,40 @@ not_found:
     return 0;
 }
 
+/* Look up variables in the cron job's environment before falling back
+ * to the daemon process environment for backward compatibility. */
+static const char *env_value(const char *name, char *const *envp) {
+    size_t name_len;
+    char *const *item;
+
+    if (envp == NULL)
+        return NULL;
+
+    name_len = strlen(name);
+    for (item = envp; *item != NULL; item++) {
+        if (strncmp(*item, name, name_len) == 0 && (*item)[name_len] == '=')
+            return *item + name_len + 1;
+    }
+    return NULL;
+}
+
 /* Expand env variables in 'source' arg and save to 'result'
  *  Return:
  * 1 - Success
  * 0 - Fail */
-int expand_envvar(const char *source, char *result, size_t max_size) {
+static int expand_envvar_impl(const char *source, char *result, size_t max_size,
+                              char *const *envp) {
     const char *envvar_p;
     size_t envvar_name_size = 0;
+
+    if (source == NULL || result == NULL || max_size == 0)
+        return 0;
 
     *result = '\0';
 
     while (find_envvar(source, &envvar_p, &envvar_name_size)) {
-        char *envvar_name, *envvar_value;
+        char *envvar_name;
+        const char *envvar_value;
         size_t prefix_size;
         
         /* Copy content before env var name */
@@ -114,7 +136,9 @@ int expand_envvar(const char *source, char *result, size_t max_size) {
         envvar_name[envvar_name_size] = '\0';
 
         /* Copy envvar value to result */
-        envvar_value = getenv(envvar_name);
+        envvar_value = env_value(envvar_name, envp);
+        if (envvar_value == NULL)
+            envvar_value = getenv(envvar_name);
         free(envvar_name);
         
         if (envvar_value != NULL) {
@@ -137,4 +161,15 @@ int expand_envvar(const char *source, char *result, size_t max_size) {
     
 too_big:
     return 0;
+}
+
+/* Legacy process-environment expansion, retained for existing callers. */
+int expand_envvar(const char *source, char *result, size_t max_size) {
+    return expand_envvar_impl(source, result, max_size, NULL);
+}
+
+/* Expand against the job environment, including its USER/HOME values. */
+int expand_envvar_in_env(const char *source, char *result, size_t max_size,
+                         char *const *envp) {
+    return expand_envvar_impl(source, result, max_size, envp);
 }

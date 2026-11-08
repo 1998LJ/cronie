@@ -133,7 +133,8 @@ static int child_process(entry * e, char **jobenv) {
 	mailfrom = env_get("MAILFROM", e->envp);
 	
 	if (mailto != NULL) {
-		if (expand_envvar(mailto, mailto_expanded, sizeof(mailto_expanded))) {
+		if (expand_envvar_in_env(mailto, mailto_expanded,
+							  sizeof(mailto_expanded), jobenv)) {
 			mailto = mailto_expanded;
 		}
 		else {
@@ -142,7 +143,8 @@ static int child_process(entry * e, char **jobenv) {
 	}
 	
 	if (mailfrom != NULL) {
-		if (expand_envvar(mailfrom, mailfrom_expanded, sizeof(mailfrom_expanded))) {
+		if (expand_envvar_in_env(mailfrom, mailfrom_expanded,
+							  sizeof(mailfrom_expanded), e->envp)) {
 			mailfrom = mailfrom_expanded;
 		}
 		else {
