@@ -32,7 +32,12 @@ int main(void) {
     test_assignment("OWNER=$USER", "OWNER=alice", prior);
     test_assignment("PATH=$HOME/$NAME", "PATH=/alt/home/private", prior);
     test_assignment("PATH=$EMPTY/x", "PATH=/x", prior);
-    test_assignment("PATH=$ONLY_PROCESS/x", "PATH=fallback/x", empty);
+    /* A normal user's crontab must never read private crond variables. */
+    assert(setenv("PRIVATE_CROND_SECRET", "top-secret", 1) == 0);
+    test_assignment("LEAK=$PRIVATE_CROND_SECRET", "LEAK=", empty);
+    test_assignment("LEAK=${PRIVATE_CROND_SECRET}/suffix", "LEAK=/suffix", prior);
+    test_assignment("PATH=$ONLY_PROCESS/x", "PATH=/x", empty);
+
     test_assignment("NAME=no-variables", "NAME=no-variables", empty);
 
     /* A literal or malformed '$' is not a variable reference. */

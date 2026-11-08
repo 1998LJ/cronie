@@ -59,7 +59,7 @@ static const char *env_value(const char *name, char *const *envp) {
  * 0 - Fail */
 static int expand_envvar_impl(const char *source, char *result, size_t max_size,
                               char *const *envp, const char *home,
-                              const char *user) {
+                              const char *user, int allow_process_env) {
     const char *envvar_p;
     size_t envvar_name_size = 0;
 
@@ -112,7 +112,10 @@ static int expand_envvar_impl(const char *source, char *result, size_t max_size,
             envvar_value = env_value(envvar_name, envp);
         if (envvar_value == NULL && home && strcmp(envvar_name, "HOME") == 0)
             envvar_value = home;
-        if (envvar_value == NULL)
+        /* Job definitions must not gain access to arbitrary variables from
+         * crond's privileged process environment. Keep that legacy fallback
+         * only for the existing mail-expansion entry points. */
+        if (envvar_value == NULL && allow_process_env)
             envvar_value = getenv(envvar_name);
         free(envvar_name);
         
@@ -140,13 +143,13 @@ too_big:
 
 /* Legacy process-environment expansion, retained for existing callers. */
 int expand_envvar(const char *source, char *result, size_t max_size) {
-    return expand_envvar_impl(source, result, max_size, NULL, NULL, NULL);
+    return expand_envvar_impl(source, result, max_size, NULL, NULL, NULL, 1);
 }
 
 /* Expand against the job environment, including its USER/HOME values. */
 int expand_envvar_in_env(const char *source, char *result, size_t max_size,
                          char *const *envp) {
-    return expand_envvar_impl(source, result, max_size, envp, NULL, NULL);
+    return expand_envvar_impl(source, result, max_size, envp, NULL, NULL, 1);
 }
 
 /* Expand a full NAME=value crontab assignment using preceding assignments,
@@ -171,5 +174,5 @@ int expand_crontab_assignment(const char *source, char *result, size_t max_size,
 
     memcpy(result, source, prefix_size);
     return expand_envvar_impl(equals + 1, result + prefix_size,
-                              max_size - prefix_size, envp, home, user);
+                              max_size - prefix_size, envp, home, user, 0);
 }
