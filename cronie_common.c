@@ -92,7 +92,8 @@ static const char *env_value(const char *name, char *const *envp) {
  * 1 - Success
  * 0 - Fail */
 static int expand_envvar_impl(const char *source, char *result, size_t max_size,
-                              char *const *envp) {
+                              char *const *envp, const char *home,
+                              const char *user) {
     const char *envvar_p;
     size_t envvar_name_size = 0;
 
@@ -137,6 +138,12 @@ static int expand_envvar_impl(const char *source, char *result, size_t max_size,
 
         /* Copy envvar value to result */
         envvar_value = env_value(envvar_name, envp);
+        if (envvar_value == NULL && home && strcmp(envvar_name, "HOME") == 0)
+            envvar_value = home;
+        if (envvar_value == NULL && user &&
+            (strcmp(envvar_name, "USER") == 0 ||
+             strcmp(envvar_name, "LOGNAME") == 0))
+            envvar_value = user;
         if (envvar_value == NULL)
             envvar_value = getenv(envvar_name);
         free(envvar_name);
@@ -165,11 +172,36 @@ too_big:
 
 /* Legacy process-environment expansion, retained for existing callers. */
 int expand_envvar(const char *source, char *result, size_t max_size) {
-    return expand_envvar_impl(source, result, max_size, NULL);
+    return expand_envvar_impl(source, result, max_size, NULL, NULL, NULL);
 }
 
 /* Expand against the job environment, including its USER/HOME values. */
 int expand_envvar_in_env(const char *source, char *result, size_t max_size,
                          char *const *envp) {
-    return expand_envvar_impl(source, result, max_size, envp);
+    return expand_envvar_impl(source, result, max_size, envp, NULL, NULL);
+}
+
+/* Expand a full NAME=value crontab assignment using preceding assignments
+ * and the crontab owner's HOME, USER and LOGNAME fallback values.
+ * Leave NAME= unchanged, so the result can be passed to env_set(). */
+int expand_crontab_assignment(const char *source, char *result, size_t max_size,
+                              char *const *envp, const char *home,
+                              const char *user) {
+    const char *equals;
+    size_t prefix_size;
+
+    if (source == NULL || result == NULL || max_size == 0)
+        return 0;
+
+    equals = strchr(source, '=');
+    if (equals == NULL)
+        return 0;
+
+    prefix_size = (size_t)(equals - source) + 1;
+    if (prefix_size >= max_size)
+        return 0;
+
+    memcpy(result, source, prefix_size);
+    return expand_envvar_impl(equals + 1, result + prefix_size,
+                              max_size - prefix_size, envp, home, user);
 }

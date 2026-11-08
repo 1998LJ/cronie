@@ -51,6 +51,10 @@ EXTRA_DIST += src/test-cronnext-tz.sh
 TESTS += src/test-expand-envvar.sh
 EXTRA_DIST += src/test-expand-envvar.sh src/tests/test-expand-envvar.c
 
+# Expand crontab environment assignments against earlier entries (#117).
+TESTS += src/test-crontab-env.sh
+EXTRA_DIST += src/test-crontab-env.sh src/tests/test-crontab-env.c
+
 common_nodist += cron-paths.h
 nodist_src_crond_SOURCES = $(common_nodist)
 nodist_src_crontab_SOURCES = $(common_nodist)

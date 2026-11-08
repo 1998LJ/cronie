@@ -40,5 +40,7 @@
 
 int expand_envvar(const char *, char *, size_t);
 int expand_envvar_in_env(const char *, char *, size_t, char *const *);
+int expand_crontab_assignment(const char *, char *, size_t, char *const *,
+                              const char *, const char *);
 
 #endif /* CRONIE_COMMON_H */

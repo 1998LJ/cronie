@@ -71,6 +71,18 @@ and
 .I SHELL
 can be overridden by settings in the crontab; LOGNAME can not.
 .PP
+Environment assignments are expanded when the crontab is loaded, in the
+order they appear. References such as
+.B $HOME
+and
+.B ${NAME}
+use values assigned earlier in the crontab. Until overridden, HOME, USER
+and LOGNAME resolve to the crontab owner's account values. For example:
+.nf
+PATH=$HOME/.local/bin:/usr/bin
+ARCHIVE=${HOME}/archive
+.fi
+.PP
 (Note: the
 .I LOGNAME
 variable is sometimes called

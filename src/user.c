@@ -31,6 +31,7 @@
 
 #include "funcs.h"
 #include "globals.h"
+#include "cronie_common.h"
 
 static const char *FileName;
 
@@ -148,18 +149,32 @@ load_user (int crontab_fd, struct passwd *pw, const char *uname,
 					u->crontab = e;
 				}
 				break;
-			case TRUE:
+			case TRUE: {
+				char expanded[MAX_ENVSTR];
 				++envs;
 				if (!u->system && envs > MAX_USER_ENVS) {
 					log_error("too many environment variables");
 					goto done;
 				}
-				if ((tenvp = env_set (envp, envstr)) == NULL) {
+				/* Expand assignments in order, using earlier crontab values
+				 * and passwd-based defaults for HOME, USER and LOGNAME. */
+				if (!expand_crontab_assignment(envstr, expanded,
+						sizeof expanded, envp,
+						pw ? pw->pw_dir : NULL,
+						pw ? pw->pw_name : NULL)) {
+					FileName = tabname;
+					log_error("environment variable expansion too long");
+					save_errno = E2BIG;
+					status = TRUE;
+					goto done;
+				}
+				if ((tenvp = env_set (envp, expanded)) == NULL) {
 					save_errno = errno;
 					goto done;
 				}
 				envp = tenvp;
 				break;
+			}
 		}
 	}
 
